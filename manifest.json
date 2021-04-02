@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "HYaPa2Non",
-    "description": "An extension to encrypt and decrypt mails !",
+    "description": "An extension to encrypt and decrypt mails",
     "version": "1.0",
     "author": "Alistair Rameau, Yoann Kergosien",
     "applications": {
@@ -19,11 +19,6 @@
     "background": {
         "page": "background.html"
 
-    },
-    "browser_action": {
-        "default_popup": "secu.html",
-        "default_title": "Security",
-        "default_icon": "images/lock32.png"
     },
     "compose_action": {
         "default_title": "Encrypt message body",

@@ -18,11 +18,10 @@ if (algo.iv) {
     (algo.iv = Hex.decode(algo.iv));
 }
 
-//const cipher = GostEngine.getGostCipher(algo);
 var cipher = new GostCipher(algo);
 
-const PATH_MATHIEU = './keysMathieu.json';
-const PATH_YOHAN = './keysYohan.json';
+const PATH_MATHIEU = './keys/keysMathieu.json';
+const PATH_YOHAN = './keys/keysYohan.json';
 var CurrentKey = "";
 
 function encodeHex(string) {
@@ -74,9 +73,9 @@ function encryptMessage(data, details, tabId) {
         var inputHex = encodeHex(body);
         var encrypted = Hex.encode(cipher.encrypt(Hex.decode(CurrentKey), Hex.decode(inputHex)));
         encrypted = encrypted.replace(/[^\-A-Fa-f0-9]/g, '').toLowerCase();
-
         body = encrypted;
-        //body += "\r\nContenu du document chiffré";
+
+        CurrentKey = "";
         browser.compose.setComposeDetails(tabId, { plainTextBody: body });
     } else {
         // The message is being composed in HTML mode. Parse the message into an HTML document.
@@ -99,10 +98,8 @@ function encryptMessage(data, details, tabId) {
             }
             document.body.appendChild(para);
         }
-        let para = document.createElement("p");
-        //para.textContent = "Contenu du document chiffré";
-        document.body.appendChild(para);
 
+		CurrentKey = "";
         let html = new XMLSerializer().serializeToString(document);
         browser.compose.setComposeDetails(tabId, { body: html });
     }
@@ -147,6 +144,7 @@ function decryptMessageContent(request, sender, sendResponse) {
             lignes[i] = output;
         }
     }
+	CurrentKey = "";
     sendResponse({ response: lignes });
 }
 
