@@ -1,3 +1,39 @@
+import { GostCoding } from './lib/src/crypto/gostCoding.js';
+import { GostCipher } from './lib/src/engine/gostCipher.js';
+
+const gostCoding = new GostCoding();
+
+const algo = {
+    name: 'GOST 28147',
+    block: 'CTR',
+    keyMeshing: 'CP',
+    block: 'CFB',
+    iv: '1234567890abcdef',
+    sBox: 'E-A'
+}
+
+const Hex = gostCoding.Hex;
+
+if (algo.iv) {
+    (algo.iv = Hex.decode(algo.iv));
+}
+
+//const cipher = GostEngine.getGostCipher(algo);
+var cipher = new GostCipher(algo);
+
+const PATH_MATHIEU = './keysMathieu.json';
+const PATH_YOHAN = './keysYohan.json';
+
+console.log("starting");
+
+function encodeHex(string) {
+    return string.split("").map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
+}
+
+function decodeHex(hex) {
+    return hex.split(/(\w\w)/g).filter(p => !!p).map(c => String.fromCharCode(parseInt(c, 16))).join("");
+}
+
 function readTextFile(file, callback) {
     var rawFile = new XMLHttpRequest();
     rawFile.overrideMimeType("application/json");
@@ -24,21 +60,25 @@ function useKeyFromFileToDecrypt(path, mail, tabId) {
 
 function encryptMessage(data, details, tabId) {
     var keys = JSON.parse(data);
-    var mail = details.to[0];
+    var mail = details.to[0].trim();
     var key;
     for (let i = 0; i < keys.length; i++) {
-        if (keys[i]["mail"] == mail) {
+        if (keys[i]["mail"].trim() == mail) {
             key = keys[i]["key"];
             break;
         }
     }
-    console.log(key);
     if (details.isPlainText) {
         // The message is being composed in plain text mode.
         let body = details.plainTextBody;
+
         //changer body en chiffrant
+        var inputHex = encodeHex(body);
+        var encrypted = Hex.encode(cipher.encrypt(Hex.decode(key), Hex.decode(inputHex)));
+        encrypted = encrypted.replace(/[^\-A-Fa-f0-9]/g, '').toLowerCase();
+
+        body = encrypted;
         body += "\r\nContenu du document chiffré";
-        console.log("Modified compose");
         browser.compose.setComposeDetails(tabId, { plainTextBody: body });
     } else {
         // The message is being composed in HTML mode. Parse the message into an HTML document.
@@ -51,9 +91,13 @@ function encryptMessage(data, details, tabId) {
         document.body.innerHTML = "";
         for (let i = 0; i < lignes.length; i++) {
             let para = document.createElement("p");
-            //changer le contenu du paragraphe en chiffrant
             if (lignes[i] != "") {
-                para.textContent = lignes[i] + " hash";
+                let text = lignes[i]; // + "hash";
+                //changer le contenu du paragraphe en chiffrant
+                let inputHex = encodeHex(text);
+                let encrypted = Hex.encode(cipher.encrypt(Hex.decode(key), Hex.decode(inputHex)));
+                encrypted = encrypted.replace(/[^\-A-Fa-f0-9]/g, '').toLowerCase();
+                para.textContent = encrypted;
             }
             document.body.appendChild(para);
         }
@@ -62,37 +106,35 @@ function encryptMessage(data, details, tabId) {
         document.body.appendChild(para);
 
         let html = new XMLSerializer().serializeToString(document);
-        console.log("Modified compose");
         browser.compose.setComposeDetails(tabId, { body: html });
     }
 }
 
 function decryptMessage(data, mail, tabId) {
-	var keys = JSON.parse(data);
-	console.log(keys);
+    var keys = JSON.parse(data);
     var key;
     for (let i = 0; i < keys.length; i++) {
-        if (keys[i]["mail"] == mail) {
+        if (keys[i]["mail"].trim() == mail) {
             key = keys[i]["key"];
             break;
         }
     }
-    console.log(key);
-	browser.tabs.executeScript(tabId, { file: './scripts/secu.js' });
+    readTextFile('./scripts/decrypt.js', function(text) {
+        text = text.replace("INSERT_KEY", key);
+        browser.tabs.executeScript(tabId, { code: text });
+    });
 }
 
 browser.composeAction.onClicked.addListener(async(tab) => {
     var tabId = tab.id;
     var details = await browser.compose.getComposeDetails(tabId);
-    useKeyFromFileToEncrypt('./keysMathieu.json', details, tabId);
+    useKeyFromFileToEncrypt(PATH_MATHIEU, details, tabId);
 });
 
-
 browser.messageDisplayAction.onClicked.addListener(async(tab) => {
-	var tabId = tab.id;
+    var tabId = tab.id;
     browser.messageDisplay.getDisplayedMessage(tab.id).then((message, author) => {
-        var mail = message.author.split("<")[1].replace(">","");
-        console.log(mail);
-        useKeyFromFileToDecrypt('./keysYohan.json', mail, tabId);
+        var mail = message.author.split("<")[1].replace(">", "").trim();
+        useKeyFromFileToDecrypt(PATH_YOHAN, mail, tabId);
     });
 });
