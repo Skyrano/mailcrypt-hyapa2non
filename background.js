@@ -23,8 +23,7 @@ var cipher = new GostCipher(algo);
 
 const PATH_MATHIEU = './keysMathieu.json';
 const PATH_YOHAN = './keysYohan.json';
-
-console.log("starting");
+var CurrentKey = "";
 
 function encodeHex(string) {
     return string.split("").map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
@@ -61,10 +60,9 @@ function useKeyFromFileToDecrypt(path, mail, tabId) {
 function encryptMessage(data, details, tabId) {
     var keys = JSON.parse(data);
     var mail = details.to[0].trim();
-    var key;
     for (let i = 0; i < keys.length; i++) {
         if (keys[i]["mail"].trim() == mail) {
-            key = keys[i]["key"];
+            CurrentKey = keys[i]["key"];
             break;
         }
     }
@@ -74,11 +72,11 @@ function encryptMessage(data, details, tabId) {
 
         //changer body en chiffrant
         var inputHex = encodeHex(body);
-        var encrypted = Hex.encode(cipher.encrypt(Hex.decode(key), Hex.decode(inputHex)));
+        var encrypted = Hex.encode(cipher.encrypt(Hex.decode(CurrentKey), Hex.decode(inputHex)));
         encrypted = encrypted.replace(/[^\-A-Fa-f0-9]/g, '').toLowerCase();
 
         body = encrypted;
-        body += "\r\nContenu du document chiffré";
+        //body += "\r\nContenu du document chiffré";
         browser.compose.setComposeDetails(tabId, { plainTextBody: body });
     } else {
         // The message is being composed in HTML mode. Parse the message into an HTML document.
@@ -95,14 +93,14 @@ function encryptMessage(data, details, tabId) {
                 let text = lignes[i]; // + "hash";
                 //changer le contenu du paragraphe en chiffrant
                 let inputHex = encodeHex(text);
-                let encrypted = Hex.encode(cipher.encrypt(Hex.decode(key), Hex.decode(inputHex)));
+                let encrypted = Hex.encode(cipher.encrypt(Hex.decode(CurrentKey), Hex.decode(inputHex)));
                 encrypted = encrypted.replace(/[^\-A-Fa-f0-9]/g, '').toLowerCase();
                 para.textContent = encrypted;
             }
             document.body.appendChild(para);
         }
         let para = document.createElement("p");
-        para.textContent = "Contenu du document chiffré";
+        //para.textContent = "Contenu du document chiffré";
         document.body.appendChild(para);
 
         let html = new XMLSerializer().serializeToString(document);
@@ -112,15 +110,13 @@ function encryptMessage(data, details, tabId) {
 
 function decryptMessage(data, mail, tabId) {
     var keys = JSON.parse(data);
-    var key;
     for (let i = 0; i < keys.length; i++) {
         if (keys[i]["mail"].trim() == mail) {
-            key = keys[i]["key"];
+            CurrentKey = keys[i]["key"];
             break;
         }
     }
-    readTextFile('./scripts/decrypt.js', function(text) {
-        text = text.replace("INSERT_KEY", key);
+    readTextFile('./scripts/inboxMessageScript.js', function(text) {
         browser.tabs.executeScript(tabId, { code: text });
     });
 }
@@ -138,3 +134,20 @@ browser.messageDisplayAction.onClicked.addListener(async(tab) => {
         useKeyFromFileToDecrypt(PATH_YOHAN, mail, tabId);
     });
 });
+
+function decryptMessageContent(request, sender, sendResponse) {
+    var lignes = request.message;
+    for (let i = 0; i < lignes.length; i++) {
+        //changer le contenu du paragraphe en déchiffrant
+        if (lignes[i] != "") {
+            let text = lignes[i];
+            var decrypted = Hex.encode(cipher.decrypt(Hex.decode(CurrentKey), Hex.decode(text)));
+            decrypted = decrypted.replace(/[^\-A-Fa-f0-9]/g, '').toLowerCase();
+            let output = decodeHex(decrypted);
+            lignes[i] = output;
+        }
+    }
+    sendResponse({ response: lignes });
+}
+
+browser.runtime.onMessage.addListener(decryptMessageContent);

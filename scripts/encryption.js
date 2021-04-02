@@ -17,7 +17,7 @@ const algo = {
 
 var key = '436563694e65506575745175457472654c75506172556e466169626c653a5e29';
 var input = 'Bonjour j éclate tes grands morts sur la place publique putain de librairie de gost de merde va crever :^ )';
-var inputHex = Buffer.from(input).toString('hex');
+var inputHex = input.split("").map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
 
 var Hex = gostCoding.Hex;
 
@@ -28,10 +28,10 @@ if (algo.iv) {
 var cipher = GostEngine.getGostCipher(algo);
 
 var encrypted = Hex.encode(cipher.encrypt(Hex.decode(key), Hex.decode(inputHex)));
-var decrypted = Hex.encode(cipher.decrypt(Hex.decode(key), Hex.decode(encrypted)));
+var decrypted = Hex.encode(cipher.decrypt(Hex.decode(key), Hex.decode('4e48742091460bffdca0583be081cd60d7ae36c11d79a4')));
 
 decrypted = decrypted.replace(/[^\-A-Fa-f0-9]/g, '').toLowerCase()
-output = Buffer.from(decrypted, 'hex').toString();
+output = decrypted.split(/(\w\w)/g).filter(p => !!p).map(c => String.fromCharCode(parseInt(c, 16))).join("")
 console.log(output);
 
 console.log("Fin de test");
