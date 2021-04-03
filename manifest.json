@@ -33,8 +33,6 @@
         "compose",
         "messagesRead",
         "messagesModify",
-        "tabs",
-        "activeTab",
-        "addressBooks"
+        "tabs"
     ]
 }
