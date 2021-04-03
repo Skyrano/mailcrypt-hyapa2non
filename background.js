@@ -68,6 +68,7 @@ function useKeyFromFileToDecrypt(path, mail, tabId) {
     });
 }
 
+//Chiffre un message donné avec le fichier de clés donné
 function encryptMessage(data, details, tabId) {
     var keys = JSON.parse(data); //on parse le contenu du fichier lu en tant que fichier json
     var mail = details.to[0].trim(); // on recupere l'address mail utilisée pour voir sa clé est dans le json
@@ -100,7 +101,7 @@ function encryptMessage(data, details, tabId) {
             let para = document.createElement("p");
             if (lignes[i] != "") {
                 let text = lignes[i];
-                //changer le contenu du paragraphe en chiffrant ligne par ligne
+                //on change le contenu du paragraphe en chiffrant ligne par ligne
                 let inputHex = encodeHex(text); //Nous mettons notre texte au format hexadécimal
                 let encrypted = Hex.encode(cipher.encrypt(Hex.decode(CurrentKey), Hex.decode(inputHex))); //Nous chiffrons notre ligne
                 encrypted = encrypted.replace(/[^\-A-Fa-f0-9]/g, '').toLowerCase(); //Ici nous faisons un trim afin de nous assurer qu'il n'y a aucun élément problématique qui s'est glissé dans notre chaine de charactère
@@ -115,6 +116,7 @@ function encryptMessage(data, details, tabId) {
     }
 }
 
+//Déchiffre un message donné avec le fichier de clés donné
 function decryptMessage(data, mail, tabId) {
     var keys = JSON.parse(data); //on parse le contenu du fichier lu en tant que fichier json
     for (let i = 0; i < keys.length; i++) {
@@ -149,7 +151,7 @@ browser.messageDisplayAction.onClicked.addListener(async(tab) => {
 function decryptMessageContent(request, sender, sendResponse) {
     var lignes = request.message;
     for (let i = 0; i < lignes.length; i++) {
-        //changer le contenu du paragraphe en déchiffrant
+        //on change le contenu du paragraphe en déchiffrant ligne par ligne
         if (lignes[i] != "") {
             let text = lignes[i];
             var decrypted = Hex.encode(cipher.decrypt(Hex.decode(CurrentKey), Hex.decode(text))); //Nous déchiffrons le message
